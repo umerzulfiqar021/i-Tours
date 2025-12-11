@@ -1,39 +1,32 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { User } from './entities/User.entity';
-import { TripPlan } from './entities/TripPlan.entity';
-import { Destination } from './entities/Destination.entity';
-import { Alert } from './entities/Alert.entity';
-import { Hotel } from './entities/Hotel.entity';
+import { UserModule } from './modules/user/user.module';
+import { TripPlanModule } from './modules/trip-plan/trip-plan.module';
+import { DestinationModule } from './modules/destination/destination.module';
+import { AlertModule } from './modules/alert/alert.module';
+import { HotelModule } from './modules/hotel/hotel.module';
+import databaseConfig from './config/database.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      load: [databaseConfig],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get<string>('DB_HOST'),
-        port: configService.get<number>('DB_PORT'),
-        username: configService.get<string>('DB_USERNAME'),
-        password: configService.get<string>('DB_PASSWORD'),
-        database: configService.get<string>('DB_DATABASE'),
-        entities: [User, TripPlan, Destination, Alert, Hotel],
-        synchronize: true,
-        ssl: true,
-        extra: {
-          ssl: {
-            rejectUnauthorized: false,
-          },
-        },
-      }),
+      useFactory: (configService: ConfigService) =>
+        configService.get<TypeOrmModuleOptions>('database') as TypeOrmModuleOptions,
       inject: [ConfigService],
     }),
+    UserModule,
+    TripPlanModule,
+    DestinationModule,
+    AlertModule,
+    HotelModule,
   ],
   controllers: [AppController],
   providers: [AppService],
