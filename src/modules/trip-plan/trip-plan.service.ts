@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TripPlan } from '../../database/entities/TripPlan.entity';
@@ -11,7 +15,13 @@ export class TripPlanService {
     private tripPlanRepository: Repository<TripPlan>,
   ) {}
 
-  create(createTripPlanDto: CreateTripPlanDto): Promise<TripPlan> {
+  async create(createTripPlanDto: CreateTripPlanDto): Promise<TripPlan> {
+    const existingTripPlan = await this.tripPlanRepository.findOne({
+      where: { name: createTripPlanDto.name },
+    });
+    if (existingTripPlan) {
+      throw new ConflictException('A trip plan with this name already exists. Please choose a different name for your trip.');
+    }
     const tripPlan = this.tripPlanRepository.create(createTripPlanDto);
     return this.tripPlanRepository.save(tripPlan);
   }
@@ -23,7 +33,7 @@ export class TripPlanService {
   async findOne(id: number): Promise<TripPlan> {
     const tripPlan = await this.tripPlanRepository.findOneBy({ id });
     if (!tripPlan) {
-      throw new NotFoundException(`TripPlan with ID ${id} not found`);
+      throw new NotFoundException('Trip plan not found. It may have been deleted or never existed.');
     }
     return tripPlan;
   }
