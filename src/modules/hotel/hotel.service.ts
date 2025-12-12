@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Hotel } from '../../database/entities/Hotel.entity';
@@ -11,7 +15,13 @@ export class HotelService {
     private hotelRepository: Repository<Hotel>,
   ) {}
 
-  create(createHotelDto: CreateHotelDto): Promise<Hotel> {
+  async create(createHotelDto: CreateHotelDto): Promise<Hotel> {
+    const existingHotel = await this.hotelRepository.findOne({
+      where: { name: createHotelDto.name },
+    });
+    if (existingHotel) {
+      throw new ConflictException('This hotel is already listed in our system. Please check the hotels list.');
+    }
     const hotel = this.hotelRepository.create(createHotelDto);
     return this.hotelRepository.save(hotel);
   }
@@ -23,7 +33,7 @@ export class HotelService {
   async findOne(id: number): Promise<Hotel> {
     const hotel = await this.hotelRepository.findOneBy({ id });
     if (!hotel) {
-      throw new NotFoundException(`Hotel with ID ${id} not found`);
+      throw new NotFoundException('Hotel not found. It may no longer be available or has been removed.');
     }
     return hotel;
   }
