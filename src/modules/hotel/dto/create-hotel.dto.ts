@@ -1,13 +1,13 @@
-import { IsString, IsNumber, IsDecimal } from 'class-validator';
+import { IsString, IsNumber } from 'class-validator';
 
 export class CreateHotelDto {
   @IsString()
   name: string;
 
-  @IsDecimal()
+  @IsNumber()
   roomRent: number;
 
-  @IsDecimal()
+  @IsNumber()
   rating: number;
 
   @IsString()

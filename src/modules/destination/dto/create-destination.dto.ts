@@ -1,13 +1,13 @@
-import { IsString, IsNumber, IsDecimal } from 'class-validator';
+import { IsString, IsNumber } from 'class-validator';
 
 export class CreateDestinationDto {
   @IsString()
   name: string;
 
-  @IsDecimal()
+  @IsNumber()
   latitude: number;
 
-  @IsDecimal()
+  @IsNumber()
   longitude: number;
 
   @IsString()
