@@ -4,6 +4,9 @@ export class CreateHotelDto {
   @IsString()
   name: string;
 
+  @IsString()
+  location: string;
+
   @IsNumber()
   roomRent: number;
 

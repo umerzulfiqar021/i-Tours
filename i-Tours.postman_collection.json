@@ -2,16 +2,16 @@
   "info": {
     "_postman_id": "i-Tours-API",
     "name": "i-Tours API",
-    "description": "API collection for i-Tours - Intelligent Destination Selection System\n\n## Authentication\nMost endpoints require JWT authentication. First call Sign In to get your token, which will be automatically saved to the collection variable `accessToken`.",
+    "description": "API collection for i-Tours - Intelligent Destination Selection System\n\n## 🔐 Registration Flow (OTP Verification)\n\n### Step 1: Sign Up\n- Call `POST /users/signup` with your details\n- You'll receive an OTP code in your email\n- Response: `{ message: 'Verification code sent...', email: '...' }`\n\n### Step 2: Verify OTP\n- Call `POST /users/verify-otp` with your email and the OTP code from your inbox\n- On success: User is created, JWT token is returned and auto-saved\n- Response: `{ user: {...}, accessToken: '...', message: 'Welcome to i-Tours!' }`\n\n### Resend OTP (Optional)\n- If OTP expired or not received, call `POST /users/resend-otp`\n\n## 🔑 Already have an account?\n- Call `POST /users/signin` with email and password\n- JWT token is auto-saved to `accessToken` variable\n\n## 📌 Using Protected Endpoints\nAll other endpoints require the `Authorization: Bearer {{accessToken}}` header (already configured).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
       "name": "Auth",
-      "description": "Authentication endpoints - Sign up and Sign in",
+      "description": "Authentication endpoints - Sign up with OTP verification and Sign in",
       "item": [
         {
-          "name": "Sign Up",
+          "name": "Step 1 - Sign Up (Send OTP)",
           "request": {
             "method": "POST",
             "header": [
@@ -22,7 +22,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"preferences\": {}\n}"
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"preferences\": {}\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/users/signup",
@@ -34,7 +34,78 @@
                 "signup"
               ]
             },
-            "description": "Register a new user account"
+            "description": "Step 1: Initiate registration. Sends OTP verification code to the provided email address."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 2 - Verify OTP (Complete Registration)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.accessToken);",
+                  "    console.log('Token saved successfully!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/verify-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "verify-otp"
+              ]
+            },
+            "description": "Step 2: Verify OTP code sent to email. On success, creates user account and returns JWT token."
+          },
+          "response": []
+        },
+        {
+          "name": "Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/resend-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "resend-otp"
+              ]
+            },
+            "description": "Resend OTP code if the previous one expired or was not received."
           },
           "response": []
         },
@@ -77,7 +148,7 @@
                 "signin"
               ]
             },
-            "description": "Login and get access token. Token is automatically saved to collection variable `accessToken`."
+            "description": "Login with existing account. Returns JWT token."
           },
           "response": []
         }
@@ -159,7 +230,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"My Awesome Trip\",\n  \"startDate\": \"2025-12-20\",\n  \"endDate\": \"2025-12-30\",\n  \"duration\": 10,\n  \"isArchived\": false\n}"
+              "raw": "{\n  \"destination\": \"Lahore\",\n  \"tripType\": \"family\",\n  \"numberOfPersons\": 4,\n  \"stayDuration\": \"3 days\",\n  \"startDate\": \"2025-12-20\",\n  \"endDate\": \"2025-12-23\",\n  \"userId\": 1\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/trip-plans",
@@ -170,7 +241,7 @@
                 "trip-plans"
               ]
             },
-            "description": "Create a new trip plan"
+            "description": "Create a new trip plan for a user"
           },
           "response": []
         },
@@ -199,6 +270,32 @@
           "response": []
         },
         {
+          "name": "Get Trip Plans by User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "description": "JWT access token"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trip-plans/user/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "trip-plans",
+                "user",
+                "1"
+              ]
+            },
+            "description": "Get all trip plans for a specific user"
+          },
+          "response": []
+        },
+        {
           "name": "Get Trip Plan by ID",
           "request": {
             "method": "GET",
@@ -220,93 +317,6 @@
               ]
             },
             "description": "Get a specific trip plan by ID"
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Destination",
-      "description": "Destination management endpoints (requires authentication)",
-      "item": [
-        {
-          "name": "Create Destination",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "description": "JWT access token"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Paris\",\n  \"latitude\": 48.8566,\n  \"longitude\": 2.3522,\n  \"description\": \"The capital of France\",\n  \"type\": \"City\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/destinations",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "destinations"
-              ]
-            },
-            "description": "Create a new destination"
-          },
-          "response": []
-        },
-        {
-          "name": "Get All Destinations",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "description": "JWT access token"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/destinations",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "destinations"
-              ]
-            },
-            "description": "Get list of all destinations"
-          },
-          "response": []
-        },
-        {
-          "name": "Get Destination by ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "description": "JWT access token"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/destinations/1",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "destinations",
-                "1"
-              ]
-            },
-            "description": "Get a specific destination by ID"
           },
           "response": []
         }
@@ -420,7 +430,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Grand Hotel\",\n  \"roomRent\": 250.50,\n  \"rating\": 4.5,\n  \"contactDetails\": \"123-456-7890\"\n}"
+              "raw": "{\n  \"name\": \"Grand Hotel\",\n  \"location\": \"Lahore\",\n  \"roomRent\": 250.50,\n  \"rating\": 4.5,\n  \"contactDetails\": \"123-456-7890\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/hotels",

@@ -1,5 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
-import { Destination } from './Destination.entity';
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 export enum Severity {
   HIGH = 'High',
@@ -27,6 +26,6 @@ export class Alert {
   @Column()
   timestamp: Date;
 
-  @ManyToOne(() => Destination, (destination) => destination.alerts)
-  destination: Destination;
+  @Column({ nullable: true })
+  location: string;
 }

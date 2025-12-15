@@ -1,9 +1,20 @@
-import { IsString, IsDate, IsNumber, IsBoolean } from 'class-validator';
+import { IsString, IsDate, IsNumber, IsEnum, IsOptional, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { TripType } from '../../../database/entities/TripPlan.entity';
 
 export class CreateTripPlanDto {
   @IsString()
-  name: string;
+  destination: string;
+
+  @IsEnum(TripType, { message: 'Trip type must be one of: friends, solo, family, couple' })
+  tripType: TripType;
+
+  @IsNumber()
+  @Min(1, { message: 'Number of persons must be at least 1' })
+  numberOfPersons: number;
+
+  @IsString()
+  stayDuration: string;
 
   @Type(() => Date)
   @IsDate()
@@ -14,8 +25,5 @@ export class CreateTripPlanDto {
   endDate: Date;
 
   @IsNumber()
-  duration: number;
-
-  @IsBoolean()
-  isArchived: boolean;
+  userId: number;
 }

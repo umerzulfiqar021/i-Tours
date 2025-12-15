@@ -3,18 +3,37 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
-  OneToMany,
+  CreateDateColumn,
 } from 'typeorm';
 import { User } from './User.entity';
-import { Destination } from './Destination.entity';
+
+export enum TripType {
+  FRIENDS = 'friends',
+  SOLO = 'solo',
+  FAMILY = 'family',
+  COUPLE = 'couple',
+}
 
 @Entity()
 export class TripPlan {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
-  name: string;
+  @Column({ nullable: true })
+  destination: string;
+
+  @Column({
+    type: 'enum',
+    enum: TripType,
+    default: TripType.SOLO,
+  })
+  tripType: TripType;
+
+  @Column({ default: 1 })
+  numberOfPersons: number;
+
+  @Column({ nullable: true })
+  stayDuration: string;
 
   @Column()
   startDate: Date;
@@ -22,15 +41,12 @@ export class TripPlan {
   @Column()
   endDate: Date;
 
-  @Column()
-  duration: number;
-
   @Column({ default: false })
   isArchived: boolean;
 
-  @ManyToOne(() => User, (user) => user.tripPlans)
-  user: User;
+  @CreateDateColumn()
+  createdAt: Date;
 
-  @OneToMany(() => Destination, (destination) => destination.tripPlan)
-  destinations: Destination[];
+  @ManyToOne(() => User, (user) => user.tripPlans, { eager: true, nullable: true })
+  user: User;
 }
