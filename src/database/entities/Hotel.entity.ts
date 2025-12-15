@@ -1,5 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
-import { Destination } from './Destination.entity';
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity()
 export class Hotel {
@@ -9,6 +8,9 @@ export class Hotel {
   @Column()
   name: string;
 
+  @Column({ nullable: true })
+  location: string;
+
   @Column('decimal')
   roomRent: number;
 
@@ -17,7 +19,4 @@ export class Hotel {
 
   @Column()
   contactDetails: string;
-
-  @ManyToOne(() => Destination, (destination) => destination.hotels)
-  destination: Destination;
 }
