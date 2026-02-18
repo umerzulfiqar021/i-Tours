@@ -17,6 +17,21 @@ export class AlertController {
     return this.alertService.findAll();
   }
 
+  // Generate alerts for a specific trip plan (Backend algorithm)
+  @Post('generate/:tripPlanId')
+  generateAlerts(
+    @Param('tripPlanId') tripPlanId: string,
+    @Body('userLocation') userLocation: string,
+  ): Promise<Alert[]> {
+    return this.alertService.generateAlertsForTripPlan(+tripPlanId, userLocation);
+  }
+
+  // Get alerts for a specific trip plan
+  @Get('trip-plan/:tripPlanId')
+  getAlertsForTripPlan(@Param('tripPlanId') tripPlanId: string): Promise<Alert[]> {
+    return this.alertService.getAlertsForTripPlan(+tripPlanId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string): Promise<Alert> {
     return this.alertService.findOne(+id);

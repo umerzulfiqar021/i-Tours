@@ -155,61 +155,6 @@
       ]
     },
     {
-      "name": "User",
-      "description": "User management endpoints (requires authentication)",
-      "item": [
-        {
-          "name": "Get All Users",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "description": "JWT access token"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users"
-              ]
-            },
-            "description": "Get list of all users"
-          },
-          "response": []
-        },
-        {
-          "name": "Get User by ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "description": "JWT access token"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/1",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                "1"
-              ]
-            },
-            "description": "Get a specific user by ID"
-          },
-          "response": []
-        }
-      ]
-    },
-    {
       "name": "Trip Plan",
       "description": "Trip plan management endpoints (requires authentication)",
       "item": [
@@ -230,7 +175,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"destination\": \"Lahore\",\n  \"tripType\": \"family\",\n  \"numberOfPersons\": 4,\n  \"stayDuration\": \"3 days\",\n  \"startDate\": \"2025-12-20\",\n  \"endDate\": \"2025-12-23\",\n  \"userId\": 1\n}"
+              "raw": "{\n  \"destinationId\": 1,\n  \"tripType\": \"family\",\n  \"numberOfPersons\": 4,\n  \"stayDuration\": \"3 days\",\n  \"startDate\": \"2025-12-20\",\n  \"endDate\": \"2025-12-23\",\n  \"userId\": 1\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/trip-plans",
@@ -242,30 +187,6 @@
               ]
             },
             "description": "Create a new trip plan for a user"
-          },
-          "response": []
-        },
-        {
-          "name": "Get All Trip Plans",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "description": "JWT access token"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/trip-plans",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "trip-plans"
-              ]
-            },
-            "description": "Get list of all trip plans"
           },
           "response": []
         },
@@ -317,93 +238,6 @@
               ]
             },
             "description": "Get a specific trip plan by ID"
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Alert",
-      "description": "Alert management endpoints (requires authentication)",
-      "item": [
-        {
-          "name": "Create Alert",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "description": "JWT access token"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"type\": \"Weather\",\n  \"message\": \"Heavy rain expected\",\n  \"severity\": \"High\",\n  \"timestamp\": \"2025-12-11T12:00:00Z\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/alerts",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "alerts"
-              ]
-            },
-            "description": "Create a new alert"
-          },
-          "response": []
-        },
-        {
-          "name": "Get All Alerts",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "description": "JWT access token"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/alerts",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "alerts"
-              ]
-            },
-            "description": "Get list of all alerts"
-          },
-          "response": []
-        },
-        {
-          "name": "Get Alert by ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "description": "JWT access token"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/alerts/1",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "alerts",
-                "1"
-              ]
-            },
-            "description": "Get a specific alert by ID"
           },
           "response": []
         }
@@ -493,6 +327,132 @@
             "description": "Get a specific hotel by ID"
           },
           "response": []
+        }
+      ]
+    },
+    {
+      "name": "Destinations",
+      "description": "Destination management with API-based data sources",
+      "item": [
+        {
+          "name": "Import Destinations (API)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/destinations/import",
+              "host": ["{{baseUrl}}"],
+              "path": ["destinations", "import"]
+            },
+            "description": "Import popular destinations using OpenStreetMap/Nominatim API"
+          }
+        },
+        {
+          "name": "Search Destinations (Free API)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/destinations/api/search?q=tourist attractions Paris&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["destinations", "api", "search"],
+              "query": [
+                {"key": "q", "value": "tourist attractions Paris"},
+                {"key": "limit", "value": "10"}
+              ]
+            },
+            "description": "Search destinations worldwide using FREE OpenStreetMap API"
+          }
+        },
+        {
+          "name": "Get All Destinations (DB)",
+          "request": {
+            "method": "GET", 
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/destinations/worldwide",
+              "host": ["{{baseUrl}}"],
+              "path": ["destinations", "worldwide"]
+            },
+            "description": "Get curated worldwide destinations from database"
+          }
+        },
+        {
+          "name": "Get Destination by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/destinations/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["destinations", "1"]
+            },
+            "description": "Get destination details by ID including hotels and alerts"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Alerts",
+      "description": "Weather & Road Condition based alert system",
+      "item": [
+        {
+          "name": "Generate Route Alerts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type", 
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userLocation\": \"Lahore, Pakistan\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/alerts/generate/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["alerts", "generate", "1"]
+            },
+            "description": "Generate real-time alerts for trip plan ID 1. Compares user location for road conditions."
+          }
+        },
+        {
+          "name": "Get Alerts for Trip Plan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/alerts/trip-plan/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["alerts", "trip-plan", "1"]
+            },
+            "description": "Get existing alerts for trip plan ID 1"
+          }
+        },
+        {
+          "name": "Get All Alerts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/alerts",
+              "host": ["{{baseUrl}}"],
+              "path": ["alerts"]
+            },
+            "description": "Get all alerts in the system"
+          }
         }
       ]
     }

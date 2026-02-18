@@ -58,7 +58,7 @@ export class UserService {
   }
 
   // Step 2: Verify OTP and create user
-  async verifyOtpAndCreateUser(verifyOtpDto: VerifyOtpDto): Promise<{ user: User; accessToken: string; message: string }> {
+  async verifyOtpAndCreateUser(verifyOtpDto: VerifyOtpDto): Promise<{ user: Partial<User>; accessToken: string; message: string }> {
     const { email, otp } = verifyOtpDto;
 
     // Verify OTP
@@ -85,8 +85,10 @@ export class UserService {
     const payload = { email: savedUser.email, sub: savedUser.id };
     const accessToken = this.jwtService.sign(payload);
 
+    const { password: _, ...userWithoutPassword } = savedUser;
+
     return { 
-      user: savedUser, 
+      user: userWithoutPassword, 
       accessToken,
       message: `Welcome to i-Tours, ${savedUser.firstName || 'Traveler'}! Your account has been created successfully.`
     };
@@ -119,7 +121,7 @@ export class UserService {
 
   async signin(
     signinUserDto: SigninUserDto,
-  ): Promise<{ user: User; accessToken: string }> {
+  ): Promise<{ user: Partial<User>; accessToken: string }> {
     const { email, password } = signinUserDto;
     const user = await this.userRepository.findOne({
       where: { email },
@@ -138,11 +140,8 @@ export class UserService {
     const payload = { email: user.email, sub: user.id };
     const accessToken = this.jwtService.sign(payload);
 
-    return { user, accessToken };
-  }
-
-  findAll(): Promise<User[]> {
-    return this.userRepository.find();
+    const { password: _, ...userWithoutPassword } = user;
+    return { user: userWithoutPassword, accessToken };
   }
 
   async findOne(id: number): Promise<User> {

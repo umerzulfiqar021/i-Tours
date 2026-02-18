@@ -6,6 +6,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TripPlan } from '../../database/entities/TripPlan.entity';
 import { User } from '../../database/entities/User.entity';
+import { Destination } from '../../database/entities/Destination.entity';
 import { CreateTripPlanDto } from './dto/create-trip-plan.dto';
 
 @Injectable()
@@ -15,6 +16,8 @@ export class TripPlanService {
     private tripPlanRepository: Repository<TripPlan>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Destination)
+    private destinationRepository: Repository<Destination>,
   ) {}
 
   async create(createTripPlanDto: CreateTripPlanDto): Promise<TripPlan> {
@@ -24,20 +27,18 @@ export class TripPlanService {
     }
 
     const tripPlan = this.tripPlanRepository.create({
-      destination: createTripPlanDto.destination,
       tripType: createTripPlanDto.tripType,
       numberOfPersons: createTripPlanDto.numberOfPersons,
       stayDuration: createTripPlanDto.stayDuration,
       startDate: createTripPlanDto.startDate,
       endDate: createTripPlanDto.endDate,
+      routePath: createTripPlanDto.routePath,
+      status: createTripPlanDto.status || 'planned',
+      destination: { id: createTripPlanDto.destinationId } as any,
       user: user,
     });
 
     return this.tripPlanRepository.save(tripPlan);
-  }
-
-  findAll(): Promise<TripPlan[]> {
-    return this.tripPlanRepository.find({ relations: ['user'] });
   }
 
   async findOne(id: number): Promise<TripPlan> {

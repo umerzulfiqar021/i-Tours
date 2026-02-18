@@ -12,11 +12,6 @@ export class TripPlanController {
     return this.tripPlanService.create(createTripPlanDto);
   }
 
-  @Get()
-  findAll(): Promise<TripPlan[]> {
-    return this.tripPlanService.findAll();
-  }
-
   @Get('user/:userId')
   findByUser(@Param('userId') userId: string): Promise<TripPlan[]> {
     return this.tripPlanService.findByUser(+userId);

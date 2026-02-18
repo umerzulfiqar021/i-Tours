@@ -1,18 +1,21 @@
-import { IsString, IsEnum, IsDate } from 'class-validator';
+import { IsString, IsEnum, IsDate, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Severity } from '../../../database/entities/Alert.entity';
+import { RiskLevel } from '../../../database/entities/Alert.entity';
 
 export class CreateAlertDto {
+  @IsEnum(RiskLevel)
+  riskLevel: RiskLevel;
+
   @IsString()
-  type: string;
+  alertType: string;
 
   @IsString()
   message: string;
 
-  @IsEnum(Severity)
-  severity: Severity;
-
   @Type(() => Date)
   @IsDate()
   timestamp: Date;
+
+  @IsNumber()
+  tripPlanId: number;
 }

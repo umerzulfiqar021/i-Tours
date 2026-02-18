@@ -18,7 +18,7 @@ export class UserController {
 
   // Step 2: Verify OTP and complete registration
   @Post('verify-otp')
-  verifyOtp(@Body() verifyOtpDto: VerifyOtpDto): Promise<{ user: User; accessToken: string }> {
+  verifyOtp(@Body() verifyOtpDto: VerifyOtpDto): Promise<{ user: Partial<User>; accessToken: string; message: string }> {
     return this.userService.verifyOtpAndCreateUser(verifyOtpDto);
   }
 
@@ -31,17 +31,7 @@ export class UserController {
   @Post('signin')
   signin(
     @Body() signinUserDto: SigninUserDto,
-  ): Promise<{ user: User; accessToken: string }> {
+  ): Promise<{ user: Partial<User>; accessToken: string }> {
     return this.userService.signin(signinUserDto);
-  }
-
-  @Get()
-  findAll(): Promise<User[]> {
-    return this.userService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string): Promise<User> {
-    return this.userService.findOne(+id);
   }
 }

@@ -1,18 +1,21 @@
-import { IsString, IsNumber } from 'class-validator';
+import { IsString, IsNumber, IsOptional } from 'class-validator';
 
 export class CreateHotelDto {
   @IsString()
   name: string;
 
-  @IsString()
-  location: string;
-
   @IsNumber()
   roomRent: number;
 
-  @IsNumber()
-  rating: number;
-
+  @IsOptional()
   @IsString()
-  contactDetails: string;
+  facilities?: string;
+
+  @IsOptional()
+  @IsString()
+  contactInfo?: string; // Renamed from contactDetails
+
+  @IsOptional()
+  @IsNumber()
+  destinationId?: number; // Added destination FK
 }

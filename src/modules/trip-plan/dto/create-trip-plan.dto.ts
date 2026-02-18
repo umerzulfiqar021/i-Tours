@@ -3,8 +3,8 @@ import { Type } from 'class-transformer';
 import { TripType } from '../../../database/entities/TripPlan.entity';
 
 export class CreateTripPlanDto {
-  @IsString()
-  destination: string;
+  @IsNumber()
+  destinationId: number; // Changed from string destination to destinationId FK
 
   @IsEnum(TripType, { message: 'Trip type must be one of: friends, solo, family, couple' })
   tripType: TripType;
@@ -23,6 +23,14 @@ export class CreateTripPlanDto {
   @Type(() => Date)
   @IsDate()
   endDate: Date;
+
+  @IsOptional()
+  @IsString()
+  routePath?: string; // Added route_path field
+
+  @IsOptional()
+  @IsString()
+  status?: string; // Added status field
 
   @IsNumber()
   userId: number;
