@@ -1,23 +1,35 @@
 import {
   Injectable,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Alert, RiskLevel } from '../../database/entities/Alert.entity';
 import { TripPlan } from '../../database/entities/TripPlan.entity';
 import { CreateAlertDto } from './dto/create-alert.dto';
+import { WeatherService } from '../weather/weather.service';
 
 @Injectable()
 export class AlertService {
+  private readonly logger = new Logger(AlertService.name);
+
   constructor(
     @InjectRepository(Alert)
-    private alertRepository: Repository<Alert>,
+    private readonly alertRepository: Repository<Alert>,
     @InjectRepository(TripPlan)
-    private tripPlanRepository: Repository<TripPlan>,
+    private readonly tripPlanRepository: Repository<TripPlan>,
+    private readonly weatherService: WeatherService,
   ) {}
 
-  // Enhanced alert generation with real weather and road condition APIs
+  /**
+   * Generates real-time alerts for a specific trip plan.
+   * Integrates weather data from RapidAPI and calculates route risks.
+   * 
+   * @param tripPlanId ID of the trip plan
+   * @param userLocation Optional user's current city/location for road condition analysis
+   * @returns List of generated alert entities
+   */
   async generateAlertsForTripPlan(tripPlanId: number, userLocation?: string): Promise<Alert[]> {
     const tripPlan = await this.tripPlanRepository.findOne({
       where: { id: tripPlanId },
@@ -25,14 +37,12 @@ export class AlertService {
     });
 
     if (!tripPlan) {
-      throw new NotFoundException(`TripPlan with ID ${tripPlanId} not found`);
+      throw new NotFoundException(`The trip plan (ID: ${tripPlanId}) could not be found.`);
     }
     
     const destination = tripPlan.destination;
     if (!destination) {
-       // If no destination is linked, we can't generate destination-specific alerts
-       // But we could potentially generate general alerts or throw error.
-       // For now, let's treat it as no alerts.
+       this.logger.warn(`No destination linked to TripPlan ${tripPlanId}. Skipping alert generation.`);
        return [];
     }
 
@@ -40,8 +50,8 @@ export class AlertService {
     const currentTime = new Date();
 
     try {
-      // Get weather condition alerts
-      const weatherAlerts = await this.checkRealWeatherConditions(destination.location);
+      // 1. Fetch Weather Alerts from RapidAPI
+      const weatherAlerts = await this.checkRapidAPIWeatherConditions(destination.location);
       for (const weatherAlert of weatherAlerts) {
         const alert = this.alertRepository.create({
           riskLevel: weatherAlert.level,
@@ -53,7 +63,7 @@ export class AlertService {
         alerts.push(await this.alertRepository.save(alert));
       }
 
-      // Get road condition alerts (comparing user location vs destination)
+      // 2. Analyze Road Conditions
       const roadAlerts = await this.checkRealRoadConditions(destination.location, userLocation);
       for (const roadAlert of roadAlerts) {
         const alert = this.alertRepository.create({
@@ -66,26 +76,13 @@ export class AlertService {
         alerts.push(await this.alertRepository.save(alert));
       }
 
-      // Additional safety alerts
-      const securityRisk = this.checkSecurityConditions(destination.location);
-      if (securityRisk) {
-        const securityAlert = this.alertRepository.create({
-          riskLevel: securityRisk.level,
-          alertType: 'security',
-          message: securityRisk.message,
-          timestamp: currentTime,
-          tripPlan: tripPlan,
-        });
-        alerts.push(await this.alertRepository.save(securityAlert));
-      }
-
     } catch (error) {
-      console.error('Error generating alerts:', error);
-      // Fallback to basic alert generation if API fails
+      this.logger.error(`Critical error during alert generation for TripPlan ${tripPlanId}: ${error.message}`);
+      
       const fallbackAlert = this.alertRepository.create({
         riskLevel: RiskLevel.LOW,
         alertType: 'system',
-        message: 'Alert system is currently updating. Please check local weather and road conditions.',
+        message: 'The alert system is currently updating. Please manually verify weather and road conditions locally.',
         timestamp: currentTime,
         tripPlan: tripPlan,
       });
@@ -95,148 +92,66 @@ export class AlertService {
     return alerts;
   }
 
-  // Real weather condition checking using free OpenWeatherMap API
-  async checkRealWeatherConditions(location: string): Promise<{ level: RiskLevel; message: string }[]> {
-    try {
-      // Extract city name from location string
-      const cityName = this.extractCityFromLocation(location);
-      
-      // You can get free API key from openweathermap.org
-      const apiKey = process.env.OPEN_WEATHER_API_KEY || 'YOUR_FREE_API_KEY_HERE';
-      
-      if (apiKey === 'YOUR_FREE_API_KEY_HERE') {
-        // Fallback to enhanced dummy data if no API key
-        return this.getEnhancedWeatherAlerts(location);
+  /**
+   * Fetches weather alerts using the RapidAPI Weather API via WeatherService.
+   */
+  async checkRapidAPIWeatherConditions(location: string): Promise<{ level: RiskLevel; message: string }[]> {
+    const { alerts: apiAlerts, current } = await this.weatherService.getRapidAPIWeather(location);
+    const alerts: { level: RiskLevel; message: string }[] = [];
+
+    if (apiAlerts && apiAlerts.length > 0) {
+      for (const apiAlert of apiAlerts) {
+        alerts.push({
+          level: this.weatherService.mapSeverityToRiskLevel(apiAlert.severity),
+          message: `Weather Alert: ${apiAlert.headline || apiAlert.event}. ${apiAlert.desc || ''}`,
+        });
       }
+    }
 
-      const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(cityName)}&appid=${apiKey}&units=metric`;
-      const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(cityName)}&appid=${apiKey}&units=metric`;
-
-      const [weatherResponse, forecastResponse] = await Promise.all([
-        fetch(weatherUrl),
-        fetch(forecastUrl)
-      ]);
-
-      if (!weatherResponse.ok || !forecastResponse.ok) {
-        return this.getEnhancedWeatherAlerts(location);
-      }
-
-      const weatherData = await weatherResponse.json();
-      const forecastData = await forecastResponse.json();
-
-      const alerts: { level: RiskLevel; message: string }[] = [];
-
-      // Current weather alerts
-      const temp = weatherData.main.temp;
-      const windSpeed = weatherData.wind.speed;
-      const weatherCondition = weatherData.weather[0].main.toLowerCase();
-      const humidity = weatherData.main.humidity;
-
-      // Temperature alerts
+    if (current) {
+      const temp = current.temp_c;
+      const wind = current.wind_kph;
+      
       if (temp > 40) {
-        alerts.push({
-          level: RiskLevel.HIGH,
-          message: `Extreme heat warning: ${temp}°C. Avoid outdoor activities during peak hours. Stay hydrated and seek shade.`
-        });
+        alerts.push({ level: RiskLevel.HIGH, message: `Extreme heat warning: ${temp}°C. Stay hydrated and seek shade.` });
       } else if (temp < 0) {
-        alerts.push({
-          level: RiskLevel.HIGH,
-          message: `Freezing temperature alert: ${temp}°C. Icy conditions possible. Drive carefully and dress warmly.`
-        });
+        alerts.push({ level: RiskLevel.HIGH, message: `Freezing alert: ${temp}°C. Dangerous driving conditions possible.` });
       }
 
-      // Wind alerts
-      if (windSpeed > 15) {
-        alerts.push({
-          level: RiskLevel.MEDIUM,
-          message: `Strong wind warning: ${windSpeed} m/s. Avoid outdoor activities and secure loose objects.`
-        });
+      if (wind > 50) {
+        alerts.push({ level: RiskLevel.MEDIUM, message: `High wind speed: ${wind} km/h. Avoid high-profile vehicles.` });
       }
+    }
 
-      // Weather condition alerts
-      if (weatherCondition.includes('thunderstorm')) {
-        alerts.push({
-          level: RiskLevel.HIGH,
-          message: 'Thunderstorm warning: Heavy rain and lightning expected. Avoid outdoor activities and travel if possible.'
-        });
-      } else if (weatherCondition.includes('snow')) {
-        alerts.push({
-          level: RiskLevel.MEDIUM,
-          message: 'Snow alert: Poor visibility and slippery roads. Drive carefully and allow extra travel time.'
-        });
-      } else if (weatherCondition.includes('rain')) {
-        alerts.push({
-          level: RiskLevel.LOW,
-          message: 'Rain alert: Wet roads and reduced visibility. Drive carefully and carry umbrella.'
-        });
-      }
-
-      // Forecast alerts (next 24 hours)
-      const next24Hours = forecastData.list.slice(0, 8); // 8 * 3 hours = 24 hours
-      const severeWeatherAhead = next24Hours.some(forecast => 
-        forecast.weather[0].main.toLowerCase().includes('thunderstorm') ||
-        forecast.weather[0].main.toLowerCase().includes('snow')
-      );
-
-      if (severeWeatherAhead) {
-        alerts.push({
-          level: RiskLevel.MEDIUM,
-          message: 'Weather forecast alert: Severe weather conditions expected in the next 24 hours. Plan accordingly.'
-        });
-      }
-
-      return alerts;
-
-    } catch (error) {
-      console.error('Weather API error:', error);
+    if (alerts.length === 0) {
       return this.getEnhancedWeatherAlerts(location);
     }
+
+    return alerts;
   }
 
-  // Enhanced weather alerts with location-specific logic (fallback)
+
+  /**
+   * Fallback seasonal logic for when APIs are unavailable.
+   */
   private getEnhancedWeatherAlerts(location: string): { level: RiskLevel; message: string }[] {
     const alerts: { level: RiskLevel; message: string }[] = [];
     const random = Math.random();
-    const month = new Date().getMonth() + 1; // 1-12
+    const month = new Date().getMonth() + 1;
     
-    // Pakistan seasonal weather patterns
     if (location.includes('Pakistan')) {
-      // Summer months (May-September)
-      if (month >= 5 && month <= 9) {
-        if (location.includes('Sindh') || location.includes('Punjab')) {
-          if (random < 0.6) {
-            alerts.push({
-              level: RiskLevel.HIGH,
-              message: 'Summer heat wave: Temperature may exceed 45°C. Avoid outdoor activities between 11 AM - 4 PM.'
-            });
-          }
-        }
-        // Monsoon season
-        if (month >= 7 && month <= 9 && random < 0.4) {
-          alerts.push({
-            level: RiskLevel.MEDIUM,
-            message: 'Monsoon alert: Heavy rainfall and flooding possible. Avoid low-lying areas and check weather updates.'
-          });
-        }
-      }
-      
-      // Winter months (December-February)
-      if ((month >= 12 || month <= 2) && location.includes('Gilgit-Baltistan')) {
-        if (random < 0.5) {
+      if (month >= 5 && month <= 9 && (location.includes('Sindh') || location.includes('Punjab'))) {
+        if (random < 0.6) {
           alerts.push({
             level: RiskLevel.HIGH,
-            message: 'Winter weather warning: Snow and sub-zero temperatures. Roads may be blocked. Carry winter gear.'
+            message: 'Seasonal Alert: Peak summer heat wave expected. Temperatures may exceed 45°C.'
           });
         }
       }
-    }
-
-    // International locations
-    if (location.includes('Dubai') && month >= 6 && month <= 9) {
-      if (random < 0.7) {
+      if ((month >= 12 || month <= 2) && location.includes('Gilgit-Baltistan')) {
         alerts.push({
-          level: RiskLevel.MEDIUM,
-          message: 'Desert heat advisory: Extreme temperatures up to 50°C. Stay in air-conditioned areas during day.'
+          level: RiskLevel.HIGH,
+          message: 'Winter Advisory: Snow and sub-zero temperatures likely. Northern passes may be restricted.'
         });
       }
     }
@@ -244,49 +159,38 @@ export class AlertService {
     return alerts;
   }
 
-  // Real road condition checking
+  /**
+   * Analyzes road conditions based on distance and known terrain features.
+   */
   async checkRealRoadConditions(destLocation: string, userLocation?: string): Promise<{ level: RiskLevel; message: string }[]> {
-    try {
-      const alerts: { level: RiskLevel; message: string }[] = [];
-      
-      // If user location is provided, we can generate route-specific alerts
-      if (userLocation) {
-        const destCoords = await this.getCoordinates(destLocation);
-        const userCoords = await this.getCoordinates(userLocation);
+    const alerts: { level: RiskLevel; message: string }[] = [];
+    
+    if (userLocation) {
+      const destCoords = await this.getCoordinates(destLocation);
+      const userCoords = await this.getCoordinates(userLocation);
 
-        if (destCoords && userCoords) {
-          const distanceKm = this.calculateDistance(destCoords.lat, destCoords.lon, userCoords.lat, userCoords.lon);
-          
-          if (distanceKm > 300) {
-             alerts.push({
-               level: RiskLevel.MEDIUM,
-               message: `Long distance travel alert: Distance is approx. ${Math.round(distanceKm)}km. Determine rest stops and check vehicle fluids.`
-             });
-          }
+      if (destCoords && userCoords) {
+        const distanceKm = this.calculateDistance(destCoords.lat, destCoords.lon, userCoords.lat, userCoords.lon);
+        
+        if (distanceKm > 300) {
+           alerts.push({
+             level: RiskLevel.MEDIUM,
+             message: `Long-haul travel: approximately ${Math.round(distanceKm)}km distance. Plan for regular rest stops.`
+           });
+        }
 
-          // Simple terrain logic based on keywords in location (Simulating terrain data)
-          const mountainKeywords = ['Valley', 'Mountain', 'Peak', 'Hunza', 'Skardu', 'Gilgit', 'Naran', 'Kalam', 'Murree', 'Galiyat'];
-          const isMountainous = mountainKeywords.some(k => destLocation.includes(k));
-          
-          if (isMountainous && distanceKm > 50) {
-             alerts.push({
-                level: RiskLevel.HIGH,
-                message: `Mountainous terrain warning: Destination is in a high-altitude region. Ensure brakes are checked and drive cautiously on curves.`
-             });
-          }
+        const mountainKeywords = ['Hunza', 'Skardu', 'Gilgit', 'Naran', 'Kalam', 'Murree', 'Galiyat'];
+        if (mountainKeywords.some(k => destLocation.includes(k))) {
+           alerts.push({
+              level: RiskLevel.HIGH,
+              message: 'Hazardous terrain: Journey involves high-altitude mountain roads. Ensure brakes are checked.'
+           });
         }
       }
-      
-      // Fallback/Supplement with smart logic
-      const roadAlerts = this.getSmartRoadConditionAlerts(destLocation);
-      alerts.push(...roadAlerts);
-
-      return alerts;
-
-    } catch (error) {
-      console.error('Road conditions API error:', error);
-      return this.getSmartRoadConditionAlerts(destLocation);
     }
+    
+    alerts.push(...this.getSmartRoadConditionAlerts(destLocation));
+    return alerts;
   }
 
   private async getCoordinates(location: string): Promise<{lat: number, lon: number} | null> {
@@ -300,13 +204,13 @@ export class AlertService {
         }
       }
     } catch (e) {
-      console.error('Geocoding error:', e);
+      this.logger.error(`Geocoding failed for ${location}: ${e.message}`);
     }
     return null;
   }
 
   private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371; // Radius of the earth in km
+    const R = 6371;
     const dLat = (lat2 - lat1) * (Math.PI / 180);
     const dLon = (lon2 - lon1) * (Math.PI / 180);
     const a = 
@@ -314,163 +218,34 @@ export class AlertService {
       Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
       Math.sin(dLon / 2) * Math.sin(dLon / 2); 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
-    const d = R * c; // Distance in km
-    return d;
+    return R * c;
   }
 
-
-
-  // Smart road condition assessment
   private getSmartRoadConditionAlerts(location: string): { level: RiskLevel; message: string }[] {
     const alerts: { level: RiskLevel; message: string }[] = [];
-    const random = Math.random();
-    const currentHour = new Date().getHours();
-    const isWeekend = [0, 6].includes(new Date().getDay());
+    const hour = new Date().getHours();
     
-    // Pakistan road conditions
     if (location.includes('Pakistan')) {
-      // Major highways
       if (location.includes('Lahore') || location.includes('Karachi') || location.includes('Islamabad')) {
-        // Rush hour traffic
-        if ((currentHour >= 7 && currentHour <= 10) || (currentHour >= 17 && currentHour <= 20)) {
-          if (!isWeekend && random < 0.8) {
-            alerts.push({
-              level: RiskLevel.MEDIUM,
-              message: 'Rush hour traffic alert: Heavy congestion expected on main routes. Allow extra travel time.'
-            });
-          }
-        }
-        
-        // Construction/maintenance
-        if (random < 0.3) {
-          alerts.push({
-            level: RiskLevel.LOW,
-            message: 'Road maintenance notice: Construction work may cause delays on some routes. Check alternate routes.'
-          });
-        }
-      }
-      
-      // Northern areas road conditions
-      if (location.includes('Gilgit-Baltistan') || location.includes('Hunza') || location.includes('Skardu')) {
-        const month = new Date().getMonth() + 1;
-        // Winter road closures
-        if ((month >= 12 || month <= 3) && random < 0.4) {
-          alerts.push({
-            level: RiskLevel.HIGH,
-            message: 'Mountain road alert: Snow and ice conditions. Some roads may be closed. Check with local authorities before travel.'
-          });
-        }
-        // Landslide risk during monsoon
-        if (month >= 7 && month <= 9 && random < 0.3) {
+        if ((hour >= 7 && hour <= 10) || (hour >= 17 && hour <= 20)) {
           alerts.push({
             level: RiskLevel.MEDIUM,
-            message: 'Landslide risk: Heavy rains may cause rockfalls and landslides on mountain roads. Drive cautiously.'
+            message: 'Traffic Alert: Peak rush hour detected in major metropolitan area. Expect significant delays.'
           });
         }
       }
-    }
-
-    // International locations
-    if (location.includes('Turkey') && random < 0.2) {
-      alerts.push({
-        level: RiskLevel.LOW,
-        message: 'Traffic advisory: Tourist season may cause increased traffic in popular areas.'
-      });
     }
 
     return alerts;
   }
 
-  // Helper function to extract city name from location string
   private extractCityFromLocation(location: string): string {
-    // Extract city name from "City, Province, Country" format
-    const parts = location.split(',');
-    return parts[0].trim();
+    return (location || '').split(',')[0].trim();
   }
 
-  // Legacy dummy methods (keeping for fallback)
-  // Dummy weather conditions algorithm
-  private checkWeatherConditions(location: string): { level: RiskLevel; message: string } | null {
-    const random = Math.random();
-    
-    // Simulate different weather risks for different locations
-    if (location.includes('Pakistan')) {
-      if (random < 0.3) {
-        return {
-          level: RiskLevel.HIGH,
-          message: 'Severe weather warning: Heavy rainfall and flooding expected in the next 24 hours.',
-        };
-      } else if (random < 0.6) {
-        return {
-          level: RiskLevel.MEDIUM,
-          message: 'Moderate weather alert: Thunderstorms possible, plan indoor activities.',
-        };
-      }
-    } else if (location.includes('Dubai') || location.includes('UAE')) {
-      if (random < 0.2) {
-        return {
-          level: RiskLevel.MEDIUM,
-          message: 'Extreme heat warning: Temperature expected to exceed 45°C. Stay hydrated.',
-        };
-      }
-    }
-    
-    return null; // No weather alert
-  }
-
-  // Dummy road conditions algorithm
-  private checkRoadConditions(location: string): { level: RiskLevel; message: string } | null {
-    const random = Math.random();
-    
-    if (location.includes('Pakistan')) {
-      if (random < 0.4) {
-        return {
-          level: RiskLevel.MEDIUM,
-          message: 'Road conditions alert: Construction work on main highway, expect delays.',
-        };
-      }
-    } else if (location.includes('France')) {
-      if (random < 0.2) {
-        return {
-          level: RiskLevel.LOW,
-          message: 'Traffic advisory: Metro strike affecting public transport schedules.',
-        };
-      }
-    }
-    
-    return null; // No road alert
-  }
-
-  // Dummy security conditions algorithm
-  private checkSecurityConditions(location: string): { level: RiskLevel; message: string } | null {
-    const random = Math.random();
-    
-    if (random < 0.1) { // 10% chance of security alert
-      return {
-        level: RiskLevel.MEDIUM,
-        message: 'Security advisory: Increased security measures in place. Keep identification documents ready.',
-      };
-    }
-    
-    return null; // No security alert
-  }
-
-  // Dummy crowd conditions algorithm
-  private checkCrowdConditions(destinationName: string): { level: RiskLevel; message: string } | null {
-    const random = Math.random();
-    const isPopularDestination = ['Eiffel Tower', 'Lahore Fort', 'Dubai Mall'].includes(destinationName);
-    
-    if (isPopularDestination && random < 0.5) {
-      return {
-        level: RiskLevel.LOW,
-        message: 'Crowd alert: High visitor volume expected. Consider visiting during off-peak hours.',
-      };
-    }
-    
-    return null; // No crowd alert
-  }
-
-  // Get alerts for a specific trip plan
+  /**
+   * Fetches existing alerts for a specific trip plan.
+   */
   async getAlertsForTripPlan(tripPlanId: number): Promise<Alert[]> {
     return this.alertRepository.find({
       where: { tripPlan: { id: tripPlanId } },
@@ -481,7 +256,7 @@ export class AlertService {
   async create(createAlertDto: CreateAlertDto): Promise<Alert> {
     const tripPlan = await this.tripPlanRepository.findOneBy({ id: createAlertDto.tripPlanId });
     if (!tripPlan) {
-      throw new NotFoundException(`Trip plan with ID ${createAlertDto.tripPlanId} not found`);
+      throw new NotFoundException(`Trip plan (ID: ${createAlertDto.tripPlanId}) not found.`);
     }
 
     const alert = this.alertRepository.create({
@@ -498,7 +273,7 @@ export class AlertService {
   async findOne(id: number): Promise<Alert> {
     const alert = await this.alertRepository.findOneBy({ id });
     if (!alert) {
-      throw new NotFoundException('Alert not found. It may have expired or been removed from the system.');
+      throw new NotFoundException(`The requested alert (ID: ${id}) could not be found.`);
     }
     return alert;
   }

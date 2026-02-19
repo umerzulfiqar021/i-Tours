@@ -10,10 +10,10 @@ export default registerAs('database', (): TypeOrmModuleOptions => ({
   database: process.env.DB_DATABASE,
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   synchronize: true,
-  ssl: true,
+  ssl: process.env.DB_HOST !== 'localhost' && process.env.DB_HOST !== '127.0.0.1',
   extra: {
-    ssl: {
+    ssl: (process.env.DB_HOST !== 'localhost' && process.env.DB_HOST !== '127.0.0.1') ? {
       rejectUnauthorized: false,
-    },
+    } : false,
   },
 }));

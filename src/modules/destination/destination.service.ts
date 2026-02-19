@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { Destination } from '../../database/entities/Destination.entity';
@@ -6,88 +6,123 @@ import { CreateDestinationDto, GetDestinationsDto } from './dto/create-destinati
 
 @Injectable()
 export class DestinationService {
+  private readonly logger = new Logger(DestinationService.name);
+
   constructor(
     @InjectRepository(Destination)
-    private destinationRepository: Repository<Destination>,
+    private readonly destinationRepository: Repository<Destination>,
   ) {}
 
-  // Fetch destinations from free OpenStreetMap Nominatim API
+  /**
+   * Fetches destination suggestions from OpenStreetMap Nominatim API.
+   * This is a free, crowd-sourced API for geocoding and search.
+   * 
+   * @param query The search term (e.g., "Paris", "historical landmarks")
+   * @param limit Maximum number of results to return
+   * @returns Array of transformed destination objects
+   */
   async fetchFromNominatim(query: string, limit: number = 10): Promise<any[]> {
     try {
+      this.logger.log(`Fetching destination suggestions for query: "${query}"`);
+      
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=${limit}&extratags=1&addressdetails=1`,
         {
           headers: {
-            'User-Agent': 'i-Tours-App/1.0 (your-email@example.com)', // Required by Nominatim
+            'User-Agent': 'i-Tours-App/1.0 (contact@i-tours.com)', // Informative User-Agent as required by OSM policy
           },
         }
       );
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        this.logger.error(`Nominatim API returned error: ${response.status} ${response.statusText}`);
+        return [];
       }
       
       const data = await response.json();
       
-      // Transform Nominatim data to our format
+      if (!Array.isArray(data)) {
+        this.logger.warn('Nominatim API returned invalid data format');
+        return [];
+      }
+
+      // Transform Nominatim data into our application's standard format
       return data.map(place => ({
         name: place.display_name.split(',')[0],
         location: place.display_name,
         category: this.categorizePlace(place.type, place.extratags),
-        budgetRange: 'medium', // Default, can be enhanced later
-        rating: 4.0, // Default rating
+        budgetRange: 'medium', // Default value; can be refined with more data sources
+        rating: 4.0,           // Placeholder rating
         latitude: place.lat,
         longitude: place.lon,
         source: 'nominatim'
       }));
     } catch (error) {
-      console.error('Error fetching from Nominatim:', error);
+      this.logger.error(`Failed to fetch from Nominatim: ${error.message}`, error.stack);
       return [];
     }
   }
 
-  // Categorize places based on Nominatim data
+  /**
+   * Maps OSM place types to our internal categories using a lookup system.
+   * 
+   * @param type The 'type' field from OSM response
+   * @param extratags Additional tags mapping to specific place types
+   * @returns A human-readable category string
+   */
   private categorizePlace(type: string, extratags: any): string {
-    if (type.includes('museum') || extratags?.historic) return 'Historical';
-    if (type.includes('park') || type.includes('natural')) return 'Natural';
-    if (type.includes('religious') || extratags?.amenity === 'place_of_worship') return 'Religious';
-    if (type.includes('beach') || type.includes('water')) return 'Beach';
-    if (type.includes('shop') || type.includes('mall')) return 'Shopping';
-    if (type.includes('tourism')) return 'Tourism';
-    return 'Cultural';
+    const LowerType = (type || '').toLowerCase();
+    
+    // Category mapping logic based on OSM tags
+    if (LowerType.includes('museum') || extratags?.historic) return 'Historical';
+    if (LowerType.includes('park') || LowerType.includes('natural') || LowerType.includes('forest')) return 'Natural';
+    if (LowerType.includes('religious') || extratags?.amenity === 'place_of_worship') return 'Religious';
+    if (LowerType.includes('beach') || LowerType.includes('water') || LowerType.includes('coast')) return 'Beach';
+    if (LowerType.includes('shop') || LowerType.includes('mall')) return 'Shopping';
+    if (LowerType.includes('tourism') || LowerType.includes('attraction')) return 'Tourism';
+    
+    return 'Cultural'; // Generic fallback
   }
 
-  // Get worldwide destinations using free API
+  /**
+   * Provides a curated list of global destinations.
+   * If a query is provided, it searches for that specific term; 
+   * otherwise, it returns a set of popular global categories.
+   */
   async getWorldwideDestinations(query?: string): Promise<any[]> {
-    const searches = query ? [query] : [
+    const searchQueries = query ? [query] : [
       'famous landmarks world',
       'tourist attractions Asia',
       'UNESCO World Heritage Sites',
       'popular destinations Europe'
     ];
 
-    let allDestinations: any[] = [];
+    let allResults: any[] = [];
     
-    for (const searchQuery of searches) {
+    for (const searchQuery of searchQueries) {
       const results = await this.fetchFromNominatim(searchQuery, 15);
-      allDestinations = [...allDestinations, ...results];
+      allResults = [...allResults, ...results];
     }
 
-    // Remove duplicates and return
-    const uniqueDestinations = allDestinations.filter((dest: any, index: number, self: any[]) => 
-      index === self.findIndex((d: any) => d.name === dest.name)
+    // De-duplicate results by name to ensure unique recommendations
+    const uniqueResults = allResults.filter((dest, index, self) => 
+      index === self.findIndex((d) => d.name === dest.name)
     );
 
-    return uniqueDestinations.slice(0, 50); // Limit to 50 results
+    return uniqueResults.slice(0, 50);
   }
 
-  // Create a new destination
+  /**
+   * Saves a new destination to the local database.
+   */
   async create(createDestinationDto: CreateDestinationDto): Promise<Destination> {
     const destination = this.destinationRepository.create(createDestinationDto);
     return await this.destinationRepository.save(destination);
   }
 
-  // Get destinations with various filtering options
+  /**
+   * Searches the local database for destinations using filters.
+   */
   async getDestinations(filters?: GetDestinationsDto): Promise<Destination[]> {
     const query = this.destinationRepository.createQueryBuilder('destination');
 
@@ -118,33 +153,43 @@ export class DestinationService {
     return await query.getMany();
   }
 
-  // Get all destinations from Pakistan only
+  /**
+   * Specifically fetches destinations located in Pakistan from the local database.
+   */
   async getPakistanDestinations(): Promise<Destination[]> {
     return await this.destinationRepository.find({
       where: { location: Like('%Pakistan%') },
     });
   }
 
-  // Get all destinations worldwide
+  /**
+   * Retrieves all destinations stored in the local database.
+   */
   async getAllDestinations(): Promise<Destination[]> {
     return await this.destinationRepository.find();
   }
 
-  // Get destinations by specific country
+  /**
+   * Gets destinations filtered by a specific country string.
+   */
   async getDestinationsByCountry(country: string): Promise<Destination[]> {
     return await this.destinationRepository.find({
       where: { location: Like(`%${country}%`) },
     });
   }
 
-  // Get destinations by specific area/city
+  /**
+   * Gets destinations filtered by a specific area or city string.
+   */
   async getDestinationsByArea(area: string): Promise<Destination[]> {
     return await this.destinationRepository.find({
       where: { location: Like(`%${area}%`) },
     });
   }
 
-  // Find one destination by ID
+  /**
+   * Finds a single destination by its ID, including its associated hotels.
+   */
   async findOne(id: number): Promise<Destination> {
     const destination = await this.destinationRepository.findOne({
       where: { id },
@@ -152,13 +197,16 @@ export class DestinationService {
     });
     
     if (!destination) {
-      throw new NotFoundException(`Destination with ID ${id} not found`);
+      throw new NotFoundException(`Destination with ID ${id} not found. Please check your input.`);
     }
     
     return destination;
   }
 
-  // Import destinations from API to populate the database properly
+  /**
+   * Background task to seed the local database with destinations from the Nominatim API.
+   * Useful for initial setup or populating a fresh environment.
+   */
   async importDestinationsFromApi(): Promise<void> {
     const searchQueries = [
       'tourist attractions in Pakistan',
@@ -168,13 +216,13 @@ export class DestinationService {
       'tourist spots in Dubai'
     ];
 
-    console.log('Starting destination import from Nominatim API...');
+    this.logger.log('Starting destination import from Nominatim API...');
 
     for (const query of searchQueries) {
       const results = await this.fetchFromNominatim(query, 10);
       
       for (const result of results) {
-        // Check if destination matches an existing one by name
+        // Prevent duplicate imports based on destination name
         const existing = await this.destinationRepository.findOne({
           where: { name: result.name }
         });
@@ -190,19 +238,6 @@ export class DestinationService {
         }
       }
     }
-    console.log('Destination import completed.');
+    this.logger.log('Destination import completed.');
   }
-
-  // TODO: Add Google Places API integration
-  // async fetchFromGooglePlaces(query: string): Promise<any> {
-  //   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-  //   const response = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}&key=${apiKey}`);
-  //   return response.json();
-  // }
-
-  // TODO: Add manual JSON file import
-  // async importFromJSON(filePath: string): Promise<void> {
-  //   const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  //   // Process and save destinations
-  // }
 }
