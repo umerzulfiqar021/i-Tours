@@ -7,7 +7,9 @@ import { UserModule } from './modules/user/user.module';
 import { TripPlanModule } from './modules/trip-plan/trip-plan.module';
 import { AlertModule } from './modules/alert/alert.module';
 import { HotelModule } from './modules/hotel/hotel.module';
+import { DestinationModule } from './modules/destination/destination.module';
 import { EmailModule } from './modules/email/email.module';
+import { WeatherModule } from './modules/weather/weather.module';
 import databaseConfig from './config/database.config';
 
 @Module({
@@ -25,8 +27,10 @@ import databaseConfig from './config/database.config';
     EmailModule,
     UserModule,
     TripPlanModule,
+    DestinationModule,
     AlertModule,
     HotelModule,
+    WeatherModule,
   ],
   controllers: [AppController],
   providers: [AppService],

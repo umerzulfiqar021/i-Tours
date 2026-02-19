@@ -5,6 +5,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { SigninUserDto } from './dto/signin-user.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ResendOtpDto } from './dto/resend-otp.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Controller('users')
 export class UserController {
@@ -18,7 +19,7 @@ export class UserController {
 
   // Step 2: Verify OTP and complete registration
   @Post('verify-otp')
-  verifyOtp(@Body() verifyOtpDto: VerifyOtpDto): Promise<{ user: User; accessToken: string }> {
+  verifyOtp(@Body() verifyOtpDto: VerifyOtpDto): Promise<{ user: Partial<User>; accessToken: string; message: string }> {
     return this.userService.verifyOtpAndCreateUser(verifyOtpDto);
   }
 
@@ -31,17 +32,19 @@ export class UserController {
   @Post('signin')
   signin(
     @Body() signinUserDto: SigninUserDto,
-  ): Promise<{ user: User; accessToken: string }> {
+  ): Promise<{ user: Partial<User>; accessToken: string }> {
     return this.userService.signin(signinUserDto);
   }
 
-  @Get()
-  findAll(): Promise<User[]> {
-    return this.userService.findAll();
+  // Forgot Password Step 1: Request OTP
+  @Post('forgot-password')
+  forgotPassword(@Body('email') email: string): Promise<{ message: string }> {
+    return this.userService.initiateForgotPassword(email);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string): Promise<User> {
-    return this.userService.findOne(+id);
+  // Forgot Password Step 2: Verify OTP and set New Password
+  @Post('reset-password')
+  resetPassword(@Body() resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
+    return this.userService.verifyOtpAndResetPassword(resetPasswordDto);
   }
 }

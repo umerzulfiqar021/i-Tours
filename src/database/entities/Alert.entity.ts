@@ -1,31 +1,33 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { TripPlan } from './TripPlan.entity';
 
-export enum Severity {
-  HIGH = 'High',
-  MEDIUM = 'Medium',
-  LOW = 'Low',
+export enum RiskLevel {
+  HIGH = 'high',
+  MEDIUM = 'medium',
+  LOW = 'low',
 }
 
-@Entity()
+@Entity('alert_history') // Rename table to match ERD
 export class Alert {
   @PrimaryGeneratedColumn()
-  id: number;
-
-  @Column()
-  type: string;
-
-  @Column('text')
-  message: string;
+  id: number; // id PK
 
   @Column({
     type: 'enum',
-    enum: Severity,
+    enum: RiskLevel,
+    nullable: true,
   })
-  severity: Severity;
-
-  @Column()
-  timestamp: Date;
+  riskLevel: RiskLevel; // risk_level
 
   @Column({ nullable: true })
-  location: string;
+  alertType: string; // alert_type
+
+  @Column('text', { nullable: true })
+  message: string;
+
+  @Column({ nullable: true })
+  timestamp: Date;
+
+  @ManyToOne(() => TripPlan, (tripPlan) => tripPlan.alerts, { eager: true, nullable: true })
+  tripPlan: TripPlan;
 }
