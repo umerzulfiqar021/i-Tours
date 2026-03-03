@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { Destination } from './Destination.entity';
+import { TripPlan } from './TripPlan.entity';
 
 @Entity()
 export class Hotel {
@@ -23,4 +24,10 @@ export class Hotel {
     nullable: true,
   })
   destination: Destination; // dest_id FK
+
+  @ManyToOne(() => TripPlan, (tripPlan) => tripPlan.systemHotels, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
+  tripPlan: TripPlan;
 }

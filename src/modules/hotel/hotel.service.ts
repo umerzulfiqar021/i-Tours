@@ -54,7 +54,10 @@ export class HotelService {
    * @returns The hotel entity
    */
   async findOne(id: number): Promise<Hotel> {
-    const hotel = await this.hotelRepository.findOneBy({ id });
+    const hotel = await this.hotelRepository.findOne({
+      where: { id },
+      relations: ['tripPlan', 'destination'],
+    });
 
     if (!hotel) {
       throw new NotFoundException(
@@ -63,5 +66,16 @@ export class HotelService {
     }
 
     return hotel;
+  }
+
+  /**
+   * Retrieves hotels for a specific destination.
+   *
+   * @param destinationId Destination ID
+   */
+  async findByDestinationId(destinationId: number): Promise<Hotel[]> {
+    return this.hotelRepository.find({
+      where: { destination: { id: destinationId } },
+    });
   }
 }

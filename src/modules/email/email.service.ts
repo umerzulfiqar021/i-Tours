@@ -211,6 +211,105 @@ Email: support@i-tours.com
     }
   }
 
+  // Send Forgot Password OTP email
+  async sendForgotPasswordEmail(
+    email: string,
+    otp: string,
+    firstName?: string,
+  ): Promise<boolean> {
+    try {
+      const fromEmail =
+        this.configService.get('SMTP_FROM_EMAIL') || 'noreply@i-tours.com';
+      const fromName = this.configService.get('SMTP_FROM_NAME') || 'i-Tours';
+      const greeting = firstName ? `Hi ${firstName},` : 'Hi there,';
+      const userName = firstName || 'there';
+
+      await this.transporter.sendMail({
+        from: `"${fromName}" <${fromEmail}>`,
+        to: email,
+        subject: `${otp} is your i-Tours password reset code`,
+        html: `
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7fa;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+              <!-- Header with Gradient -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #FF6B35 0%, #FF8C61 50%, #FFB088 100%); padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
+                  <h1 style="margin: 0; color: #ffffff; font-size: 36px; font-weight: 700; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">✈️ i-Tours</h1>
+                  <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 14px; letter-spacing: 1px;">Security & Password Reset</p>
+                </td>
+              </tr>
+              
+              <!-- Main Content -->
+              <tr>
+                <td style="padding: 50px 40px; background-color: #ffffff;">
+                  <h2 style="margin: 0 0 20px; color: #2d3748; font-size: 24px; font-weight: 600;">${greeting}</h2>
+                  <p style="margin: 0 0 30px; color: #718096; font-size: 16px; line-height: 1.6;">
+                    We received a request to reset your <strong style="color: #FF6B35;">i-Tours</strong> account password. Please use the verification code below to proceed:
+                  </p>
+                  
+                  <!-- OTP Code Box -->
+                  <div style="text-align: center; margin: 40px 0;">
+                    <div style="display: inline-block; background: linear-gradient(145deg, #fff5f0 0%, #ffffff 100%); border: 3px solid #FF6B35; border-radius: 16px; padding: 25px 50px; box-shadow: 0 10px 40px rgba(255, 107, 53, 0.15);">
+                      <span style="font-size: 42px; font-weight: 800; color: #FF6B35; letter-spacing: 12px; font-family: 'Courier New', monospace;">${otp}</span>
+                    </div>
+                  </div>
+                  
+                  <!-- Timer Warning -->
+                  <div style="text-align: center; margin: 30px 0;">
+                    <p style="display: inline-block; background-color: #fff5f0; color: #c53030; font-size: 14px; padding: 12px 24px; border-radius: 25px; margin: 0;">
+                      ⏰ This code expires in <strong>10 minutes</strong>
+                    </p>
+                  </div>
+                  
+                  <!-- Safety Section -->
+                  <div style="margin-top: 40px; padding: 25px; background-color: #f7fafc; border-radius: 12px; border-left: 4px solid #FF6B35;">
+                    <p style="margin: 0; color: #4a5568; font-size: 14px; line-height: 1.6;">
+                      <strong>Security Tip:</strong> If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
+                    </p>
+                  </div>
+                </td>
+              </tr>
+              
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #2d3748; padding: 40px 30px; border-radius: 0 0 12px 12px;">
+                  <div style="text-align: center; color: #a0aec0; font-size: 13px; line-height: 1.8;">
+                    <p style="margin: 0 0 10px;"><strong style="color: #ffffff;">i-Tours Technologies</strong></p>
+                    <p style="margin: 0 0 5px;">📍 Paris Road, Near Allama Iqbal Stadium, Sialkot 51310, Punjab, Pakistan</p>
+                    <p style="margin: 0 0 15px;">📞 +92 307 9629399 &nbsp; | &nbsp; ✉️ support@i-tours.com</p>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </body>
+          </html>
+        `,
+        text: `Hi ${userName},
+        
+        We received a request to reset your i-Tours account password.
+        
+        Your reset code is: ${otp}
+        
+        This code will expire in 10 minutes.
+        
+        If you didn't request this code, please ignore this email.
+        
+        © 2025 i-Tours. All rights reserved.`,
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error sending forgot password email:', error);
+      return false;
+    }
+  }
+
   // Verify OTP
   async verifyOTP(email: string, otp: string): Promise<boolean> {
     const storedOTP = await this.getOTP(email);

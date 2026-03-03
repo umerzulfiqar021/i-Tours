@@ -21,4 +21,11 @@ export class HotelController {
   findOne(@Param('id') id: string): Promise<Hotel> {
     return this.hotelService.findOne(+id);
   }
+
+  @Get('destination/:destinationId')
+  findByDestination(
+    @Param('destinationId') destinationId: string,
+  ): Promise<Hotel[]> {
+    return this.hotelService.findByDestinationId(+destinationId);
+  }
 }

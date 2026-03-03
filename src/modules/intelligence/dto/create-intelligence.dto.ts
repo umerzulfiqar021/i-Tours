@@ -1,13 +1,13 @@
 import { IsString, IsEnum, IsDate, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
-import { RiskLevel } from '../../../database/entities/Alert.entity';
+import { RiskLevel } from '../../../database/entities/IntelligenceInsight.entity';
 
-export class CreateAlertDto {
+export class CreateIntelligenceDto {
   @IsEnum(RiskLevel)
   riskLevel: RiskLevel;
 
   @IsString()
-  alertType: string;
+  insightType: string;
 
   @IsString()
   message: string;

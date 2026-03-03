@@ -10,6 +10,10 @@ import { Type } from 'class-transformer';
 import { TripType } from '../../../database/entities/TripPlan.entity';
 
 export class CreateTripPlanDto {
+  @IsString()
+  @IsOptional()
+  name?: string;
+
   @IsNumber()
   destinationId: number; // Changed from string destination to destinationId FK
 
@@ -40,6 +44,12 @@ export class CreateTripPlanDto {
   @IsOptional()
   @IsString()
   status?: string; // Added status field
+
+  @IsNumber()
+  latitude: number;
+
+  @IsNumber()
+  longitude: number;
 
   @IsNumber()
   userId: number;

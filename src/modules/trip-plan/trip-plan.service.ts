@@ -5,6 +5,8 @@ import { TripPlan } from '../../database/entities/TripPlan.entity';
 import { User } from '../../database/entities/User.entity';
 import { Destination } from '../../database/entities/Destination.entity';
 import { CreateTripPlanDto } from './dto/create-trip-plan.dto';
+import { IntelligenceService } from '../intelligence/intelligence.service';
+import { IntelligenceGateway } from '../intelligence/intelligence.gateway';
 
 @Injectable()
 export class TripPlanService {
@@ -17,6 +19,8 @@ export class TripPlanService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Destination)
     private readonly destinationRepository: Repository<Destination>,
+    private readonly intelligenceService: IntelligenceService,
+    private readonly intelligenceGateway: IntelligenceGateway,
   ) {}
 
   /**
@@ -37,6 +41,7 @@ export class TripPlanService {
     }
 
     const tripPlan = this.tripPlanRepository.create({
+      name: createTripPlanDto.name,
       tripType: createTripPlanDto.tripType,
       numberOfPersons: createTripPlanDto.numberOfPersons,
       stayDuration: createTripPlanDto.stayDuration,
@@ -44,11 +49,34 @@ export class TripPlanService {
       endDate: createTripPlanDto.endDate,
       routePath: createTripPlanDto.routePath,
       status: createTripPlanDto.status || 'planned',
-      destination: { id: createTripPlanDto.destinationId } as any,
+      latitude: createTripPlanDto.latitude,
+      longitude: createTripPlanDto.longitude,
+      destination: {
+        id: createTripPlanDto.destinationId,
+      } as Destination,
       user: user,
     });
 
-    return this.tripPlanRepository.save(tripPlan);
+    const savedTrip = await this.tripPlanRepository.save(tripPlan);
+
+    // AUTO-TRIGGER INTELLIGENCE
+    try {
+      this.logger.log(
+        `Auto-triggering intelligence for new trip ${savedTrip.id}`,
+      );
+      const data = await this.intelligenceService.generateIntelligentInsights(
+        savedTrip.user.id,
+        savedTrip.id,
+      );
+      // Emit WebSocket Event
+      this.intelligenceGateway.emitInsightsReady(savedTrip.id, data);
+    } catch (e) {
+      this.logger.error(
+        `Failed to auto-trigger intelligence: ${e instanceof Error ? e.message : 'Unknown'}`,
+      );
+    }
+
+    return savedTrip;
   }
 
   /**

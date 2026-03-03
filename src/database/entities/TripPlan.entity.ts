@@ -8,7 +8,8 @@ import {
 } from 'typeorm';
 import { User } from './User.entity';
 import { Destination } from './Destination.entity';
-import { Alert } from './Alert.entity';
+import { IntelligenceInsight } from './IntelligenceInsight.entity';
+import { Hotel } from './Hotel.entity';
 
 export enum TripType {
   FRIENDS = 'friends',
@@ -22,15 +23,18 @@ export class TripPlan {
   @PrimaryGeneratedColumn()
   id: number; // trip_id PK
 
+  @Column({ nullable: true })
+  name: string;
+
   @Column({
     type: 'enum',
     enum: TripType,
     default: TripType.SOLO,
   })
-  tripType: TripType;
+  tripType: TripType = TripType.SOLO;
 
   @Column({ default: 1 })
-  numberOfPersons: number;
+  numberOfPersons: number = 1;
 
   @Column({ nullable: true })
   stayDuration: string;
@@ -65,6 +69,15 @@ export class TripPlan {
   })
   destination: Destination; // dest_id FK
 
-  @OneToMany(() => Alert, (alert) => alert.tripPlan)
-  alerts: Alert[];
+  @Column('decimal', { precision: 10, scale: 7, nullable: true })
+  latitude: number;
+
+  @Column('decimal', { precision: 10, scale: 7, nullable: true })
+  longitude: number;
+
+  @OneToMany(() => IntelligenceInsight, (insight) => insight.tripPlan)
+  intelligenceInsights: IntelligenceInsight[];
+
+  @OneToMany(() => Hotel, (hotel) => hotel.tripPlan)
+  systemHotels: Hotel[];
 }

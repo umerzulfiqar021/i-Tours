@@ -5,7 +5,7 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UserModule } from './modules/user/user.module';
 import { TripPlanModule } from './modules/trip-plan/trip-plan.module';
-import { AlertModule } from './modules/alert/alert.module';
+import { IntelligenceModule } from './modules/intelligence/intelligence.module';
 import { HotelModule } from './modules/hotel/hotel.module';
 import { DestinationModule } from './modules/destination/destination.module';
 import { EmailModule } from './modules/email/email.module';
@@ -30,7 +30,7 @@ import databaseConfig from './config/database.config';
     UserModule,
     TripPlanModule,
     DestinationModule,
-    AlertModule,
+    IntelligenceModule,
     HotelModule,
     ExternalDataModule,
   ],

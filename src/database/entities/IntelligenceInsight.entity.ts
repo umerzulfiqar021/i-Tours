@@ -7,20 +7,20 @@ export enum RiskLevel {
   LOW = 'low',
 }
 
-@Entity('alert_history') // Rename table to match ERD
-export class Alert {
+@Entity('intelligence_insights')
+export class IntelligenceInsight {
   @PrimaryGeneratedColumn()
-  id: number; // id PK
+  id: number;
 
   @Column({
     type: 'enum',
     enum: RiskLevel,
     nullable: true,
   })
-  riskLevel: RiskLevel; // risk_level
+  riskLevel: RiskLevel;
 
   @Column({ nullable: true })
-  alertType: string; // alert_type
+  insightType: string;
 
   @Column('text', { nullable: true })
   message: string;
@@ -28,7 +28,7 @@ export class Alert {
   @Column({ nullable: true })
   timestamp: Date;
 
-  @ManyToOne(() => TripPlan, (tripPlan) => tripPlan.alerts, {
+  @ManyToOne(() => TripPlan, (tripPlan) => tripPlan.intelligenceInsights, {
     eager: true,
     nullable: true,
   })

@@ -228,7 +228,7 @@ export class UserService {
     const otp = this.emailService.generateOTP();
     await this.emailService.storeOTP(email, otp);
 
-    const isEmailSent = await this.emailService.sendOTPEmail(
+    const isEmailSent = await this.emailService.sendForgotPasswordEmail(
       email,
       otp,
       user.firstName,
