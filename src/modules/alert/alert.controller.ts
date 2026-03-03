@@ -23,12 +23,17 @@ export class AlertController {
     @Param('tripPlanId') tripPlanId: string,
     @Body('userLocation') userLocation: string,
   ): Promise<Alert[]> {
-    return this.alertService.generateAlertsForTripPlan(+tripPlanId, userLocation);
+    return this.alertService.generateAlertsForTripPlan(
+      +tripPlanId,
+      userLocation,
+    );
   }
 
   // Get alerts for a specific trip plan
   @Get('trip-plan/:tripPlanId')
-  getAlertsForTripPlan(@Param('tripPlanId') tripPlanId: string): Promise<Alert[]> {
+  getAlertsForTripPlan(
+    @Param('tripPlanId') tripPlanId: string,
+  ): Promise<Alert[]> {
     return this.alertService.getAlertsForTripPlan(+tripPlanId);
   }
 

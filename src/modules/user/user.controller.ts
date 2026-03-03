@@ -13,13 +13,17 @@ export class UserController {
 
   // Step 1: Initiate signup - sends OTP to email
   @Post('signup')
-  initiateSignup(@Body() createUserDto: CreateUserDto): Promise<{ message: string; email: string }> {
+  initiateSignup(
+    @Body() createUserDto: CreateUserDto,
+  ): Promise<{ message: string; email: string }> {
     return this.userService.initiateSignup(createUserDto);
   }
 
   // Step 2: Verify OTP and complete registration
   @Post('verify-otp')
-  verifyOtp(@Body() verifyOtpDto: VerifyOtpDto): Promise<{ user: Partial<User>; accessToken: string; message: string }> {
+  verifyOtp(
+    @Body() verifyOtpDto: VerifyOtpDto,
+  ): Promise<{ user: Partial<User>; accessToken: string; message: string }> {
     return this.userService.verifyOtpAndCreateUser(verifyOtpDto);
   }
 
@@ -44,7 +48,9 @@ export class UserController {
 
   // Forgot Password Step 2: Verify OTP and set New Password
   @Post('reset-password')
-  resetPassword(@Body() resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
+  resetPassword(
+    @Body() resetPasswordDto: ResetPasswordDto,
+  ): Promise<{ message: string }> {
     return this.userService.verifyOtpAndResetPassword(resetPasswordDto);
   }
 }

@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TripPlan } from '../../database/entities/TripPlan.entity';
@@ -26,14 +22,18 @@ export class TripPlanService {
   /**
    * Creates a new trip plan for a user.
    * Validates user existence before proceeding.
-   * 
+   *
    * @param createTripPlanDto Details of the trip plan
    * @returns The created trip plan
    */
   async create(createTripPlanDto: CreateTripPlanDto): Promise<TripPlan> {
-    const user = await this.userRepository.findOneBy({ id: createTripPlanDto.userId });
+    const user = await this.userRepository.findOneBy({
+      id: createTripPlanDto.userId,
+    });
     if (!user) {
-      throw new NotFoundException(`The user (ID: ${createTripPlanDto.userId}) was not found. Trip plans must be linked to a valid user account.`);
+      throw new NotFoundException(
+        `The user (ID: ${createTripPlanDto.userId}) was not found. Trip plans must be linked to a valid user account.`,
+      );
     }
 
     const tripPlan = this.tripPlanRepository.create({
@@ -62,7 +62,9 @@ export class TripPlanService {
     });
 
     if (!tripPlan) {
-      throw new NotFoundException(`The trip plan (ID: ${id}) could not be located. It may have been deleted.`);
+      throw new NotFoundException(
+        `The trip plan (ID: ${id}) could not be located. It may have been deleted.`,
+      );
     }
 
     return tripPlan;

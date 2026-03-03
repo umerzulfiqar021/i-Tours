@@ -21,7 +21,7 @@ export class HotelService {
   /**
    * Registers a new hotel in the system.
    * Prevents duplicates by checking the hotel name.
-   * 
+   *
    * @param createHotelDto Hotel details
    * @returns The saved hotel entity
    */
@@ -29,9 +29,11 @@ export class HotelService {
     const existingHotel = await this.hotelRepository.findOne({
       where: { name: createHotelDto.name },
     });
-    
+
     if (existingHotel) {
-      throw new ConflictException(`The hotel "${createHotelDto.name}" is already registered in our system.`);
+      throw new ConflictException(
+        `The hotel "${createHotelDto.name}" is already registered in our system.`,
+      );
     }
 
     const hotel = this.hotelRepository.create(createHotelDto);
@@ -47,17 +49,19 @@ export class HotelService {
 
   /**
    * Finds a specific hotel by its ID.
-   * 
+   *
    * @param id Unique hotel identifier
    * @returns The hotel entity
    */
   async findOne(id: number): Promise<Hotel> {
     const hotel = await this.hotelRepository.findOneBy({ id });
-    
+
     if (!hotel) {
-      throw new NotFoundException(`The requested hotel (ID: ${id}) could not be found. It may have been removed or updated.`);
+      throw new NotFoundException(
+        `The requested hotel (ID: ${id}) could not be found. It may have been removed or updated.`,
+      );
     }
-    
+
     return hotel;
   }
 }

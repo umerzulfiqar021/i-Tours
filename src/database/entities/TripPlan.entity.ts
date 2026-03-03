@@ -53,10 +53,16 @@ export class TripPlan {
   @CreateDateColumn()
   createdAt: Date;
 
-  @ManyToOne(() => User, (user) => user.tripPlans, { eager: true, nullable: true })
+  @ManyToOne(() => User, (user) => user.tripPlans, {
+    eager: true,
+    nullable: true,
+  })
   user: User; // user_id FK
 
-  @ManyToOne(() => Destination, (destination) => destination.tripPlans, { eager: true, nullable: true })
+  @ManyToOne(() => Destination, (destination) => destination.tripPlans, {
+    eager: true,
+    nullable: true,
+  })
   destination: Destination; // dest_id FK
 
   @OneToMany(() => Alert, (alert) => alert.tripPlan)

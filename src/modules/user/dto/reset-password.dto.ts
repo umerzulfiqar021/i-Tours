@@ -9,6 +9,8 @@ export class ResetPasswordDto {
   otp: string;
 
   @IsNotEmpty({ message: 'A new password is required.' })
-  @MinLength(8, { message: 'Your new password must be at least 8 characters long.' })
+  @MinLength(8, {
+    message: 'Your new password must be at least 8 characters long.',
+  })
   newPassword: string;
 }

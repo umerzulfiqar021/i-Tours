@@ -28,6 +28,9 @@ export class Alert {
   @Column({ nullable: true })
   timestamp: Date;
 
-  @ManyToOne(() => TripPlan, (tripPlan) => tripPlan.alerts, { eager: true, nullable: true })
+  @ManyToOne(() => TripPlan, (tripPlan) => tripPlan.alerts, {
+    eager: true,
+    nullable: true,
+  })
   tripPlan: TripPlan;
 }

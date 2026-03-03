@@ -1,4 +1,11 @@
-import { IsString, IsDate, IsNumber, IsEnum, IsOptional, Min } from 'class-validator';
+import {
+  IsString,
+  IsDate,
+  IsNumber,
+  IsEnum,
+  IsOptional,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { TripType } from '../../../database/entities/TripPlan.entity';
 
@@ -6,7 +13,9 @@ export class CreateTripPlanDto {
   @IsNumber()
   destinationId: number; // Changed from string destination to destinationId FK
 
-  @IsEnum(TripType, { message: 'Trip type must be one of: friends, solo, family, couple' })
+  @IsEnum(TripType, {
+    message: 'Trip type must be one of: friends, solo, family, couple',
+  })
   tripType: TripType;
 
   @IsNumber()

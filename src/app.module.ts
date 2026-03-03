@@ -9,7 +9,7 @@ import { AlertModule } from './modules/alert/alert.module';
 import { HotelModule } from './modules/hotel/hotel.module';
 import { DestinationModule } from './modules/destination/destination.module';
 import { EmailModule } from './modules/email/email.module';
-import { WeatherModule } from './modules/weather/weather.module';
+import { ExternalDataModule } from './modules/external-data/external-data.module';
 import databaseConfig from './config/database.config';
 
 @Module({
@@ -21,7 +21,9 @@ import databaseConfig from './config/database.config';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) =>
-        configService.get<TypeOrmModuleOptions>('database') as TypeOrmModuleOptions,
+        configService.get<TypeOrmModuleOptions>(
+          'database',
+        ) as TypeOrmModuleOptions,
       inject: [ConfigService],
     }),
     EmailModule,
@@ -30,7 +32,7 @@ import databaseConfig from './config/database.config';
     DestinationModule,
     AlertModule,
     HotelModule,
-    WeatherModule,
+    ExternalDataModule,
   ],
   controllers: [AppController],
   providers: [AppService],

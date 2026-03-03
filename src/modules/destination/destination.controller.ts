@@ -1,7 +1,10 @@
 import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
 import { DestinationService } from './destination.service';
 import { Destination } from '../../database/entities/Destination.entity';
-import { CreateDestinationDto, GetDestinationsDto } from './dto/create-destination.dto';
+import {
+  CreateDestinationDto,
+  GetDestinationsDto,
+} from './dto/create-destination.dto';
 
 @Controller('destinations')
 export class DestinationController {
@@ -9,7 +12,9 @@ export class DestinationController {
 
   // Create a new destination
   @Post()
-  create(@Body() createDestinationDto: CreateDestinationDto): Promise<Destination> {
+  create(
+    @Body() createDestinationDto: CreateDestinationDto,
+  ): Promise<Destination> {
     return this.destinationService.create(createDestinationDto);
   }
 
@@ -17,7 +22,9 @@ export class DestinationController {
 
   // Get destinations with filtering options (from our database)
   @Get('search')
-  getDestinations(@Query() filters: GetDestinationsDto): Promise<Destination[]> {
+  getDestinations(
+    @Query() filters: GetDestinationsDto,
+  ): Promise<Destination[]> {
     return this.destinationService.getDestinations(filters);
   }
 
@@ -38,7 +45,9 @@ export class DestinationController {
   // Get destinations by specific country (manual data)
   // USAGE: /destinations/country/India or /destinations/country/Turkey
   @Get('country/:country')
-  getDestinationsByCountry(@Param('country') country: string): Promise<Destination[]> {
+  getDestinationsByCountry(
+    @Param('country') country: string,
+  ): Promise<Destination[]> {
     return this.destinationService.getDestinationsByCountry(country);
   }
 
@@ -54,7 +63,9 @@ export class DestinationController {
   // Get worldwide destinations using FREE Nominatim API
   // USAGE: When you want fresh data from all over the world
   @Get('api/worldwide')
-  async getWorldwideDestinationsAPI(@Query('query') query?: string): Promise<any[]> {
+  async getWorldwideDestinationsAPI(
+    @Query('query') query?: string,
+  ): Promise<any[]> {
     return this.destinationService.getWorldwideDestinations(query);
   }
 
@@ -63,7 +74,7 @@ export class DestinationController {
   @Get('api/search')
   async searchDestinationsAPI(
     @Query('q') query: string,
-    @Query('limit') limit?: string
+    @Query('limit') limit?: string,
   ): Promise<any[]> {
     const limitNumber = limit ? parseInt(limit) : 10;
     return this.destinationService.fetchFromNominatim(query, limitNumber);
@@ -82,9 +93,9 @@ export class DestinationController {
   async importDestinations(): Promise<{ message: string; count: number }> {
     await this.destinationService.importDestinationsFromApi();
     const count = await this.destinationService.getAllDestinations();
-    return { 
-      message: 'Destinations imported from Nominatim API successfully!', 
-      count: count.length 
+    return {
+      message: 'Destinations imported from Nominatim API successfully!',
+      count: count.length,
     };
   }
 }

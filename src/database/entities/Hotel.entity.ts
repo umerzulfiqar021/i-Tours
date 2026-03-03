@@ -18,6 +18,9 @@ export class Hotel {
   @Column({ nullable: true })
   contactInfo: string; // contact_info
 
-  @ManyToOne(() => Destination, (destination) => destination.hotels, { eager: true, nullable: true })
+  @ManyToOne(() => Destination, (destination) => destination.hotels, {
+    eager: true,
+    nullable: true,
+  })
   destination: Destination; // dest_id FK
 }

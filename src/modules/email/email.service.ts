@@ -63,9 +63,14 @@ export class EmailService {
   }
 
   // Send OTP email
-  async sendOTPEmail(email: string, otp: string, firstName?: string): Promise<boolean> {
+  async sendOTPEmail(
+    email: string,
+    otp: string,
+    firstName?: string,
+  ): Promise<boolean> {
     try {
-      const fromEmail = this.configService.get('SMTP_FROM_EMAIL') || 'noreply@i-tours.com';
+      const fromEmail =
+        this.configService.get('SMTP_FROM_EMAIL') || 'noreply@i-tours.com';
       const fromName = this.configService.get('SMTP_FROM_NAME') || 'i-Tours';
       const greeting = firstName ? `Hi ${firstName},` : 'Hi there,';
       const userName = firstName || 'there';
