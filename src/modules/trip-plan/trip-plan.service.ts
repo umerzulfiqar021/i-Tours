@@ -64,12 +64,13 @@ export class TripPlanService {
       this.logger.log(
         `Auto-triggering intelligence for new trip ${savedTrip.id}`,
       );
-      const data = await this.intelligenceService.generateIntelligentInsights(
-        savedTrip.user.id,
-        savedTrip.id,
-      );
+      const data = await this.intelligenceService.generateIntelligentInsights({
+        userId: savedTrip.user.id,
+        tripPlanId: savedTrip.id,
+      });
       // Emit WebSocket Event
       this.intelligenceGateway.emitInsightsReady(savedTrip.id, data);
+
     } catch (e) {
       this.logger.error(
         `Failed to auto-trigger intelligence: ${e instanceof Error ? e.message : 'Unknown'}`,
@@ -86,7 +87,7 @@ export class TripPlanService {
   async findOne(id: number): Promise<TripPlan> {
     const tripPlan = await this.tripPlanRepository.findOne({
       where: { id },
-      relations: ['user'],
+      relations: ['user', 'destination'],
     });
 
     if (!tripPlan) {
@@ -110,8 +111,9 @@ export class TripPlanService {
 
     return this.tripPlanRepository.find({
       where: { user: { id: userId } },
-      relations: ['user'],
+      relations: ['user', 'destination'],
       order: { createdAt: 'DESC' },
     });
   }
+
 }

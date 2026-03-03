@@ -9,6 +9,8 @@ import {
 } from '@nestjs/common';
 import { IntelligenceService } from './intelligence.service';
 import { CreateIntelligenceDto } from './dto/create-intelligence.dto';
+import { GenerateIntelligenceDto } from './dto/generate-intelligence.dto';
+
 
 @Controller('intelligence')
 export class IntelligenceController {
@@ -29,12 +31,13 @@ export class IntelligenceController {
     this.logger.log(
       `Triggering intelligent insights for user: ${userId}, trip: ${tripId}`,
     );
-    return this.intelligenceService.generateIntelligentInsights(
-      +userId,
-      +tripId,
+    return this.intelligenceService.generateIntelligentInsights({
+      userId: +userId,
+      tripPlanId: +tripId,
       userLocation,
-    );
+    });
   }
+
 
   @Post()
   create(@Body() createDto: CreateIntelligenceDto) {
@@ -45,4 +48,15 @@ export class IntelligenceController {
   findAll() {
     return this.intelligenceService.findAll();
   }
+
+  /**
+   * POST /intelligence/generate
+   * Flexible endpoint to trigger intelligence with body data.
+   */
+  @Post('generate')
+  async generateInsights(@Body() generateDto: any) {
+    this.logger.log(`Manually triggering intelligence for data: ${JSON.stringify(generateDto)}`);
+    return this.intelligenceService.generateIntelligentInsights(generateDto);
+  }
 }
+

@@ -10,6 +10,8 @@ import { HotelModule } from './modules/hotel/hotel.module';
 import { DestinationModule } from './modules/destination/destination.module';
 import { EmailModule } from './modules/email/email.module';
 import { ExternalDataModule } from './modules/external-data/external-data.module';
+import { CityModule } from './modules/city/city.module';
+
 import databaseConfig from './config/database.config';
 
 @Module({
@@ -33,6 +35,7 @@ import databaseConfig from './config/database.config';
     IntelligenceModule,
     HotelModule,
     ExternalDataModule,
+    CityModule,
   ],
   controllers: [AppController],
   providers: [AppService],
